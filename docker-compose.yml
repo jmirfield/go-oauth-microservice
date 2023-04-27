@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  postgres:
+    user: root
+    image: 'postgres:14.2'
+    ports:
+      - "5432:5432"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth
+    volumes:
+      - ./db/postgres/:/var/lib/postgresql/data/
+  
+  pgadmin:
+    user: root
+    image: dpage/pgadmin4
+    depends_on:
+      - postgres
+    restart: always
+    ports: 
+      - "4000:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./db/pgadmin/:/var/lib/pgadmin/
