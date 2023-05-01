@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/go-oauth2/oauth2/v4"
@@ -22,15 +22,21 @@ type App struct {
 }
 
 // NewApp constructor
-func NewApp(key []byte, db *pgxpool.Pool) *App {
+func NewApp(key []byte, db *pgxpool.Pool) (*App, error) {
 	manager := manage.NewManager()
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", key, jwt.SigningMethodRS256))
 
 	adapter := pgx4adapter.NewPool(db)
-	tokenStore, _ := pg.NewTokenStore(adapter, pg.WithTokenStoreGCInterval(time.Minute))
+	tokenStore, err := pg.NewTokenStore(adapter, pg.WithTokenStoreGCInterval(time.Minute))
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup token store: %s", err)
+	}
 	defer tokenStore.Close()
 
-	clientStore, _ := pg.NewClientStore(adapter)
+	clientStore, err := pg.NewClientStore(adapter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup client store: %s", err)
+	}
 
 	manager.MapTokenStorage(tokenStore)
 	manager.MapClientStorage(clientStore)
@@ -45,16 +51,17 @@ func NewApp(key []byte, db *pgxpool.Pool) *App {
 	srv.SetClientInfoHandler(server.ClientFormHandler)
 
 	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-		log.Println("Internal Error:", err.Error())
+		fmt.Printf("Internal Error: %s\n", err.Error())
 		return
 	})
 
 	srv.SetResponseErrorHandler(func(re *errors.Response) {
-		log.Println("Response Error:", re.Error.Error())
+		fmt.Printf("Response Error: %s\n", re.Error.Error())
 	})
 
 	return &App{
+		key:  &privateKey.PublicKey,
 		cs:   clientStore,
 		osrv: srv,
-	}
+	}, nil
 }

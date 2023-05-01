@@ -25,7 +25,10 @@ func main() {
 	}
 	defer dbpool.Close()
 
-	app := NewApp(key, dbpool)
+	app, err := NewApp(key, dbpool)
+	if err != nil {
+		log.Fatalf("Unable to setup app: %s\n", err)
+	}
 	http.HandleFunc("/register", app.RegisterHandler())
 	http.HandleFunc("/token", app.TokenHandler())
 	http.HandleFunc("/validate", app.ValidateTokenHandler())
