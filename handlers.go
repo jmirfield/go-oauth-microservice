@@ -10,6 +10,7 @@ import (
 
 type Response struct {
 	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 func (a *App) TokenHandler() func(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +35,11 @@ func (a *App) RegisterHandler() func(w http.ResponseWriter, r *http.Request) {
 			Domain: "http://localhost",
 		})
 		if err != nil {
-			WriteJSON(w, Response{err.Error()}, http.StatusInternalServerError)
+			WriteJSON(w, Response{Message: err.Error()}, http.StatusInternalServerError)
 			return
 		}
 
-		WriteJSON(w, RegisterResponse{Response: Response{"Success"}, ClientID: clientID, ClientSecret: clientSecret}, http.StatusCreated)
+		WriteJSON(w, RegisterResponse{Response: Response{Message: "Success"}, ClientID: clientID, ClientSecret: clientSecret}, http.StatusCreated)
 	}
 }
 
@@ -46,10 +47,16 @@ func (a *App) ValidateTokenHandler() func(w http.ResponseWriter, r *http.Request
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, err := a.osrv.ValidationBearerToken(r)
 		if err != nil {
-			WriteJSON(w, Response{"Invalid request"}, http.StatusUnauthorized)
+			WriteJSON(w, Response{Message: "Invalid request"}, http.StatusUnauthorized)
 			return
 		}
-		WriteJSON(w, Response{"Valid"}, http.StatusOK)
+		WriteJSON(w, Response{Message: "Valid"}, http.StatusOK)
+	}
+}
+
+func (a *App) PublicKeyHandler() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		WriteJSON(w, Response{Message: "Public Key", Data: a.publicPEM}, http.StatusOK)
 	}
 }
 

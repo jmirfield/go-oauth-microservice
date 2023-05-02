@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"time"
 
@@ -17,12 +19,26 @@ import (
 
 // App struct
 type App struct {
-	cs   *pg.ClientStore
-	osrv *server.Server
+	publicPEM []byte
+	cs        *pg.ClientStore
+	osrv      *server.Server
 }
 
 // NewApp constructor
 func NewApp(key []byte, db *pgxpool.Pool) (*App, error) {
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(key)
+	if err != nil {
+		return nil, fmt.Errorf("unabled to parse key: %s", err)
+	}
+	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("Error encoding public key: %s", err)
+	}
+	publicKeyBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: publicKeyPEM,
+	})
+
 	manager := manage.NewManager()
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", key, jwt.SigningMethodRS256))
 
@@ -60,8 +76,8 @@ func NewApp(key []byte, db *pgxpool.Pool) (*App, error) {
 	})
 
 	return &App{
-		key:  &privateKey.PublicKey,
-		cs:   clientStore,
-		osrv: srv,
+		publicPEM: publicKeyBytes,
+		cs:        clientStore,
+		osrv:      srv,
 	}, nil
 }
