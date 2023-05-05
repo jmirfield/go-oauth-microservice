@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, client *models.Client) (*models.Token, error)
+	Public() *rsa.PublicKey
 }
 
 type tokenService struct {
@@ -41,4 +42,8 @@ func (ts *tokenService) Create(ctx context.Context, client *models.Client) (*mod
 	}
 
 	return t, nil
+}
+
+func (ts *tokenService) Public() *rsa.PublicKey {
+	return &ts.k.PublicKey
 }

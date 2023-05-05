@@ -19,7 +19,7 @@ type server struct {
 }
 
 func Run(cfg *config.Config) error {
-	keys, err := rsa.SetupKeyPair(cfg.PrivateKeyPath)
+	key, err := rsa.GetPrivateKey(cfg.PrivateKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to setup rsa key pairs: %s", err)
 	}
@@ -42,7 +42,7 @@ func Run(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup token repo: %s", err)
 	}
-	tokenService := token.NewService(tokenRepo, keys.Private)
+	tokenService := token.NewService(tokenRepo, key)
 
 	manager := manager.NewManager(clientService, tokenService)
 
@@ -51,33 +51,6 @@ func Run(cfg *config.Config) error {
 	r := chi.NewRouter()
 	srv.setupRoutes(r, "v1")
 
-	// manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", key, jwt.SigningMethodRS256))
-
-	// adapter := pgx4adapter.NewPool(dbpool)
-	// tokenStore, err := pg.NewTokenStore(adapter, pg.WithTokenStoreGCInterval(time.Minute))
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to setup token store: %s", err)
-	// }
-	// defer tokenStore.Close()
-
-	// clientStore, err := pg.NewClientStore(adapter)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to setup client store: %s", err)
-	// }
-
-	// manager.MapTokenStorage(tokenStore)
-	// manager.MapClientStorage(clientStore)
-
-	// oauthSrv := server.NewDefaultServer(manager)
-	// oauthSrv.SetAllowGetAccessRequest(true)
-	// oauthSrv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-	// 	fmt.Printf("Internal Error: %s\n", err.Error())
-	// 	return
-	// })
-
-	// oauthSrv.SetResponseErrorHandler(func(re *errors.Response) {
-	// 	fmt.Printf("Response Error: %s\n", re.Error.Error())
-	// })
 	http.ListenAndServe(fmt.Sprintf(":%s", cfg.Port), r)
 	return nil
 }
