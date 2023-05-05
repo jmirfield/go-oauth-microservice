@@ -14,15 +14,10 @@ type Validator struct {
 }
 
 // NewValidator -
-func NewValidator(publicKey []byte) (*Validator, error) {
-	key, err := jwt.ParseRSAPublicKeyFromPEM(publicKey)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse key: %s", err)
-	}
-
+func NewValidator(key *rsa.PublicKey) *Validator {
 	return &Validator{
 		key: key,
-	}, nil
+	}
 }
 
 // Validate validates a JWT

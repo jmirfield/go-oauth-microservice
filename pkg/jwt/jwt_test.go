@@ -1,12 +1,8 @@
 package jwt
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"testing"
 	"time"
 
@@ -18,15 +14,9 @@ func TestNewValidator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
 
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
+
 	if err != nil {
 		t.Fatalf("Failed to create validator: %s", err)
 	}
@@ -36,45 +26,13 @@ func TestNewValidator(t *testing.T) {
 	}
 }
 
-func TestNewValidatorWithInvalidPublicKey(t *testing.T) {
-	// Creating a non-RSA public key
-	invalidPublicKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	if err != nil {
-		t.Fatalf("Failed to generate invalid public key: %s", err)
-	}
-
-	// Marshaling the public key to PEM format
-	invalidPublicKeyPEM, err := x509.MarshalPKIXPublicKey(&invalidPublicKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding invalid public key: %s", err)
-	}
-
-	// Trying to create a validator with an invalid public key
-	_, err = NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "EC PUBLIC KEY",
-		Bytes: invalidPublicKeyPEM,
-	}))
-
-	if err == nil {
-		t.Fatal("Expected error but got nil")
-	}
-}
-
 func TestValidate(t *testing.T) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
 
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
-
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub": "1234567890",
@@ -120,15 +78,7 @@ func TestValidateWithExpiredToken(t *testing.T) {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
 
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
-
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub": "1234567890",
@@ -153,15 +103,7 @@ func TestValidateWithInvalidClaims(t *testing.T) {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
 
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
-
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"invalid": "1234567890",
@@ -184,15 +126,7 @@ func TestValidateWithInvalidToken(t *testing.T) {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
 
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
-
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
 	if err != nil {
 		t.Fatalf("Failed to create validator: %s", err)
 	}
@@ -209,15 +143,7 @@ func TestValidateWrongAlgorithm(t *testing.T) {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
 
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("Error encoding public key: %s", err)
-	}
-
-	validator, err := NewValidator(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PUBLIC KEY",
-		Bytes: publicKeyPEM,
-	}))
+	validator := NewValidator(&privateKey.PublicKey)
 	if err != nil {
 		t.Fatalf("Failed to create validator: %s", err)
 	}
