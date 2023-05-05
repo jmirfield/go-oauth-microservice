@@ -3,6 +3,8 @@ module oauth
 go 1.19
 
 require (
+	github.com/fatih/structs v1.1.0
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
