@@ -10,12 +10,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-type Keys struct {
-	Private *rsa.PrivateKey
-	Public  *rsa.PublicKey
-}
-
-func SetupKeyPair(privateKeyPath string) (*Keys, error) {
+func GetPrivateKey(privateKeyPath string) (*rsa.PrivateKey, error) {
 	keyFile, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read key file: %s", err)
@@ -25,18 +20,18 @@ func SetupKeyPair(privateKeyPath string) (*Keys, error) {
 		return nil, fmt.Errorf("unabled to parse private key: %s", err)
 	}
 
-	return &Keys{Private: privateKey, Public: &privateKey.PublicKey}, nil
+	return privateKey, nil
 }
 
-func (k *Keys) PrivateBytes() []byte {
+func PrivateBytes(p *rsa.PrivateKey) []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(k.Private),
+		Bytes: x509.MarshalPKCS1PrivateKey(p),
 	})
 }
 
-func (k *Keys) PublicBytes() ([]byte, error) {
-	publicKeyPEM, err := x509.MarshalPKIXPublicKey(k.Public)
+func PublicBytes(p *rsa.PublicKey) ([]byte, error) {
+	publicKeyPEM, err := x509.MarshalPKIXPublicKey(p)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding public key: %s", err)
 	}
