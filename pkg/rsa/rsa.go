@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"oauth/config"
 	"os"
 
 	"github.com/golang-jwt/jwt"
@@ -16,8 +15,8 @@ type Keys struct {
 	Public  *rsa.PublicKey
 }
 
-func SetupKeyPair(cfg *config.Config) (*Keys, error) {
-	keyFile, err := os.ReadFile(cfg.PrivateKeyPath)
+func SetupKeyPair(privateKeyPath string) (*Keys, error) {
+	keyFile, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read key file: %s", err)
 	}
