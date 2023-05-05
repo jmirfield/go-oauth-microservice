@@ -40,7 +40,7 @@ func Run(cfg *config.Config) error {
 	// eventually switch out dbpool for an adapter
 	tokenRepo, err := token.NewRepository(dbpool)
 	if err != nil {
-		return fmt.Errorf("failed to setup client repo: %s", err)
+		return fmt.Errorf("failed to setup token repo: %s", err)
 	}
 	tokenService := token.NewService(tokenRepo, keys.Private)
 
