@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, client *models.Client) (*models.Token, error)
+	GetAccess(ctx context.Context, token string) (*models.Token, error)
 	Public() *rsa.PublicKey
 }
 
@@ -42,6 +43,10 @@ func (ts *tokenService) Create(ctx context.Context, client *models.Client) (*mod
 	}
 
 	return t, nil
+}
+
+func (ts *tokenService) GetAccess(ctx context.Context, token string) (*models.Token, error) {
+	return ts.r.GetByToken(ctx, token)
 }
 
 func (ts *tokenService) Public() *rsa.PublicKey {

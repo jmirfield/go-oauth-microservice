@@ -1,47 +1,66 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"oauth/internal/errors"
 	"oauth/internal/models"
+	"strings"
+	"time"
 )
+
+type response struct {
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+}
+
+func writeJSON(w http.ResponseWriter, data any, code int) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(data)
+}
 
 func (s *server) registerHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		client, err := s.m.RegisterClient(ctx)
 		if err != nil {
-			WriteJSON(w, Response{Message: err.Error()}, http.StatusInternalServerError)
+			writeJSON(w, response{Message: err.Error()}, http.StatusInternalServerError)
 			return
 		}
 
-		WriteJSON(w, client, http.StatusCreated)
+		writeJSON(w, client, http.StatusCreated)
 	}
+}
+
+type tokenResponse struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 func (s *server) tokenHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		client, err := s.validateTokenRequest(r)
+		client, err := s.validateTokenHandlerRequest(r)
 		if err != nil {
-			WriteJSON(w, Response{Message: err.Error()}, http.StatusBadRequest)
+			writeJSON(w, response{Message: err.Error()}, http.StatusBadRequest)
 			return
 		}
 
 		token, err := s.m.GenerateToken(ctx, client)
 		if err == errors.ErrInternalServer {
-			WriteJSON(w, Response{Message: err.Error()}, http.StatusInternalServerError)
+			writeJSON(w, response{Message: err.Error()}, http.StatusInternalServerError)
 			return
 		} else if err == errors.ErrInvalidClient || err != nil {
-			WriteJSON(w, Response{Message: err.Error()}, http.StatusUnauthorized)
+			writeJSON(w, response{Message: err.Error()}, http.StatusUnauthorized)
 			return
 		}
 
-		WriteJSON(w, token, http.StatusOK)
+		writeJSON(w, tokenResponse{AccessToken: token.Access, ExpiresAt: token.ExpiresAt}, http.StatusOK)
 	}
 }
 
-func (s *server) validateTokenRequest(r *http.Request) (*models.Client, error) {
+func (s *server) validateTokenHandlerRequest(r *http.Request) (*models.Client, error) {
 	gt := r.FormValue("grant_type")
 	if gt != "client_credentials" {
 		return nil, errors.ErrUnsupportedGrantType
@@ -54,4 +73,24 @@ func (s *server) validateTokenRequest(r *http.Request) (*models.Client, error) {
 	clientSecret := r.Form.Get("client_secret")
 
 	return &models.Client{ID: clientID, Secret: clientSecret}, nil
+}
+
+func (s *server) tokenValidationHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, s.validateBearerToken(r), http.StatusOK)
+	}
+}
+
+func (s *server) validateBearerToken(r *http.Request) bool {
+	ctx := r.Context()
+	auth := r.Header.Get("Authorization")
+	prefix := "Bearer "
+	token := ""
+	if len(auth) > 0 && strings.HasPrefix(auth, prefix) {
+		token = auth[len(prefix):]
+	} else {
+		return false
+	}
+
+	return s.m.ValidateToken(ctx, token)
 }

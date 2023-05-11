@@ -7,6 +7,7 @@ import (
 	"oauth/internal/app/token"
 	"oauth/internal/errors"
 	"oauth/internal/models"
+	"oauth/pkg/rsa"
 )
 
 // Manager orchestrates client and token services
@@ -32,9 +33,9 @@ func (m *Manager) RegisterClient(ctx context.Context) (*models.Client, error) {
 }
 
 // GenerateToken handles token generation
-func (m *Manager) GenerateToken(ctx context.Context, req *models.Client) (*models.Token, error) {
-	client, err := m.clientService.GetByID(ctx, req.ID)
-	if err != nil || req.Secret != client.Secret {
+func (m *Manager) GenerateToken(ctx context.Context, reqClient *models.Client) (*models.Token, error) {
+	client, err := m.clientService.GetByID(ctx, reqClient.ID)
+	if err != nil || reqClient.Secret != client.Secret {
 		return nil, errors.ErrInvalidClient
 	}
 
@@ -45,4 +46,17 @@ func (m *Manager) GenerateToken(ctx context.Context, req *models.Client) (*model
 	}
 
 	return token, nil
+}
+
+func (m *Manager) ValidateToken(ctx context.Context, reqToken string) bool {
+	_, err := m.tokenService.GetAccess(ctx, reqToken)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (m *Manager) GetPublicKey() ([]byte, error) {
+	return rsa.PublicBytes(m.tokenService.Public())
 }

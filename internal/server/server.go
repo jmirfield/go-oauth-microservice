@@ -59,5 +59,6 @@ func (s *server) setupRoutes(r chi.Router, version string) {
 	r.Route(fmt.Sprintf("/%s", version), func(r chi.Router) {
 		r.Post("/register", s.registerHandler())
 		r.Get("/token", s.tokenHandler())
+		r.Get("/validate", s.tokenValidationHandler())
 	})
 }

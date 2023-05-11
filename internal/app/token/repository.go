@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, token *models.Token) error
-	// GetByToken(ctx context.Context, token string) (*models.Token, error)
+	GetByToken(ctx context.Context, token string) (*models.Token, error)
 	// DeleteByToken(ctx context.Context, token string) error
 }
 
@@ -46,4 +46,18 @@ func (tr *tokenRepository) Create(ctx context.Context, token *models.Token) erro
 	VALUES ($1, $2)
 	`, token.Access, token.ExpiresAt)
 	return err
+}
+
+func (tr *tokenRepository) GetByToken(ctx context.Context, token string) (*models.Token, error) {
+	var t models.Token
+
+	rows := tr.pool.QueryRow(ctx, "SELECT access, expires_at FROM public.token where access = $1", token)
+	err := rows.Scan(
+		&t.Access,
+		&t.ExpiresAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
