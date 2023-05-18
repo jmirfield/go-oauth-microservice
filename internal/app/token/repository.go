@@ -2,7 +2,9 @@ package token
 
 import (
 	"context"
+	"fmt"
 	"oauth/internal/models"
+	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -14,17 +16,24 @@ type Repository interface {
 }
 
 type tokenRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	ticker time.Ticker
+	done   chan bool
 }
 
 func NewRepository(pool *pgxpool.Pool) (*tokenRepository, error) {
-	repo := &tokenRepository{pool}
+	repo := &tokenRepository{pool, *time.NewTicker(5 * time.Minute), make(chan bool)}
 	err := repo.initTable()
 	if err != nil {
 		return nil, err
 	}
+	go repo.gc()
 
 	return repo, nil
+}
+
+func (tr *tokenRepository) Close() {
+	tr.done <- true
 }
 
 func (tr *tokenRepository) initTable() error {
@@ -38,6 +47,23 @@ func (tr *tokenRepository) initTable() error {
 	CREATE INDEX IF NOT EXISTS idx_token_expires_at ON token (expires_at);
 	`)
 	return err
+}
+
+func (tr *tokenRepository) gc() {
+	for {
+		select {
+		case <-tr.done:
+			return
+		case <-tr.ticker.C:
+			_, err := tr.pool.Exec(context.Background(), `
+			DELETE FROM TOKEN WHERE expires_at < $1;
+			`, time.Now())
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+	}
 }
 
 func (tr *tokenRepository) Create(ctx context.Context, token *models.Token) error {
