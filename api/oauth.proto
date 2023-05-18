@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "github.com/jmirfield/oauth";
+
+package oauth;
+
+message KeyRequest {}
+
+message KeyResponse {
+    string key = 1;
+}
+
+message TokenRequest {
+    string token = 1;
+}
+
+message TokenResponse {
+    bool valid = 1;
+}
+
+service Auth{
+    rpc GetKey(KeyRequest) returns (KeyResponse){};
+    rpc ValidateToken(TokenRequest) returns (TokenResponse){};
+}
+

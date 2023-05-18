@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	oauth "oauth/api"
 	"oauth/config"
 	"oauth/internal/app/client"
 	"oauth/internal/app/manager"
@@ -11,15 +12,32 @@ import (
 	"oauth/pkg/rsa"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
 )
 
 type app struct {
 	m *manager.Manager
+	oauth.UnimplementedAuthServer
+}
+
+// rootHandler returns an http.Handler that delegates to grpcServer on incoming gRPC
+// connections or otherHandler otherwise. Copied from https://github.com/alvarowolfx/go-grpc-rest-api-demo.
+func rootHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			otherHandler.ServeHTTP(w, r)
+		}
+	}), &http2.Server{})
 }
 
 func Run(cfg *config.Config) error {
@@ -28,20 +46,19 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("unable to setup rsa key pairs: %s", err)
 	}
 
+	// eventually switch out dbpool for an adapter
 	dbpool, err := pgxpool.Connect(context.Background(), cfg.DSN)
 	if err != nil {
 		return fmt.Errorf("unable to create connection pool: %s", err)
 	}
 	defer dbpool.Close()
 
-	// eventually switch out dbpool for an adapter
 	clientRepo, err := client.NewRepository(dbpool)
 	if err != nil {
 		return fmt.Errorf("failed to setup client repo: %s", err)
 	}
 	clientService := client.NewService(clientRepo)
 
-	// eventually switch out dbpool for an adapter
 	tokenRepo, err := token.NewRepository(dbpool)
 	if err != nil {
 		return fmt.Errorf("failed to setup token repo: %s", err)
@@ -51,14 +68,18 @@ func Run(cfg *config.Config) error {
 
 	manager := manager.NewManager(clientService, tokenService)
 
-	app := &app{manager}
+	app := &app{m: manager}
 
 	r := chi.NewRouter()
 	app.setupRoutes(r, "v1")
 
+	var opts []grpc.ServerOption
+	grpcServer := grpc.NewServer(opts...)
+	oauth.RegisterAuthServer(grpcServer, app)
+
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.Port),
-		Handler: r,
+		Handler: rootHandler(grpcServer, r),
 	}
 
 	go func() {
