@@ -8,8 +8,10 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
-	log.Fatal(server.Run(cfg))
-
+	err := server.Run(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// http.HandleFunc("/register", app.RegisterHandler())
 	// http.HandleFunc("/token", app.TokenHandler())
 	// http.HandleFunc("/validate", app.ValidateTokenHandler())

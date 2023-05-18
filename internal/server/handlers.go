@@ -20,10 +20,10 @@ func writeJSON(w http.ResponseWriter, data any, code int) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func (s *server) registerHandler() http.HandlerFunc {
+func (a *app) registerHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		client, err := s.m.RegisterClient(ctx)
+		client, err := a.m.RegisterClient(ctx)
 		if err != nil {
 			writeJSON(w, response{Message: err.Error()}, http.StatusInternalServerError)
 			return
@@ -38,16 +38,16 @@ type tokenResponse struct {
 	ExpiresAt   time.Time `json:"expires_at"`
 }
 
-func (s *server) tokenHandler() http.HandlerFunc {
+func (a *app) tokenHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		client, err := s.validateTokenHandlerRequest(r)
+		client, err := a.validateTokenHandlerRequest(r)
 		if err != nil {
 			writeJSON(w, response{Message: err.Error()}, http.StatusBadRequest)
 			return
 		}
 
-		token, err := s.m.GenerateToken(ctx, client)
+		token, err := a.m.GenerateToken(ctx, client)
 		if err == errors.ErrInternalServer {
 			writeJSON(w, response{Message: err.Error()}, http.StatusInternalServerError)
 			return
@@ -60,7 +60,7 @@ func (s *server) tokenHandler() http.HandlerFunc {
 	}
 }
 
-func (s *server) validateTokenHandlerRequest(r *http.Request) (*models.Client, error) {
+func (a *app) validateTokenHandlerRequest(r *http.Request) (*models.Client, error) {
 	gt := r.FormValue("grant_type")
 	if gt != "client_credentials" {
 		return nil, errors.ErrUnsupportedGrantType
@@ -75,13 +75,13 @@ func (s *server) validateTokenHandlerRequest(r *http.Request) (*models.Client, e
 	return &models.Client{ID: clientID, Secret: clientSecret}, nil
 }
 
-func (s *server) tokenValidationHandler() http.HandlerFunc {
+func (a *app) tokenValidationHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, s.validateBearerToken(r), http.StatusOK)
+		writeJSON(w, a.validateBearerToken(r), http.StatusOK)
 	}
 }
 
-func (s *server) validateBearerToken(r *http.Request) bool {
+func (a *app) validateBearerToken(r *http.Request) bool {
 	ctx := r.Context()
 	auth := r.Header.Get("Authorization")
 	prefix := "Bearer "
@@ -92,5 +92,5 @@ func (s *server) validateBearerToken(r *http.Request) bool {
 		return false
 	}
 
-	return s.m.ValidateToken(ctx, token)
+	return a.m.ValidateToken(ctx, token)
 }

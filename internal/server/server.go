@@ -9,12 +9,16 @@ import (
 	"oauth/internal/app/manager"
 	"oauth/internal/app/token"
 	"oauth/pkg/rsa"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type server struct {
+type app struct {
 	m *manager.Manager
 }
 
@@ -42,23 +46,47 @@ func Run(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup token repo: %s", err)
 	}
+	defer tokenRepo.Close()
 	tokenService := token.NewService(tokenRepo, key)
 
 	manager := manager.NewManager(clientService, tokenService)
 
-	srv := &server{manager}
+	app := &app{manager}
 
 	r := chi.NewRouter()
-	srv.setupRoutes(r, "v1")
+	app.setupRoutes(r, "v1")
 
-	http.ListenAndServe(fmt.Sprintf(":%s", cfg.Port), r)
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: r,
+	}
+
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			fmt.Println(err)
+		}
+	}()
+	done := make(chan os.Signal, 1)
+
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-done
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *server) setupRoutes(r chi.Router, version string) {
+func (a *app) setupRoutes(r chi.Router, version string) {
 	r.Route(fmt.Sprintf("/%s", version), func(r chi.Router) {
-		r.Post("/register", s.registerHandler())
-		r.Get("/token", s.tokenHandler())
-		r.Get("/validate", s.tokenValidationHandler())
+		r.Post("/register", a.registerHandler())
+		r.Get("/token", a.tokenHandler())
+		r.Get("/validate", a.tokenValidationHandler())
 	})
 }
