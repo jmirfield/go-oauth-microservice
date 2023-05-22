@@ -7,7 +7,7 @@ package oauth;
 message KeyRequest {}
 
 message KeyResponse {
-    string key = 1;
+    bytes key = 1;
 }
 
 message TokenRequest {
