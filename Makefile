@@ -1,6 +1,6 @@
 # main
 run:
-	go run ./...
+	go run ./cmd/server
 
 test:
 	go test -cover -v -race ./...
