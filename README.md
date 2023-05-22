@@ -10,7 +10,7 @@ Stop service using docker-compose:
 make down
 ```
 
-Manage postgres using [pgadmin]([url](http://localhost:4000/)):
+Manage postgres using pgadmin - http://localhost:4000/:
 ```
 EMAIL: pgadmin@pgadmin.org
 PASSWORD: admin
