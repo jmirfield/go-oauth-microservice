@@ -9,7 +9,7 @@ build:
 	env GOOS=linux CGO_ENABLED=0 go build -o ./bin/oauth ./cmd/server/main.go
 
 # docker compose
-up:
+up: build
 	docker-compose up --build -d
 
 down:

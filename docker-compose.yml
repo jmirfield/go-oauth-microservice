@@ -30,3 +30,18 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     volumes:
       - ./db/pgadmin/:/var/lib/pgadmin/
+  
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth.dockerfile
+    depends_on:
+      - postgres
+    restart: always
+    ports:
+      - "3000:3000"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "host=postgres port=5432 user=postgres password=password dbname=auth sslmode=disable timezone=UTC connect_timeout=5"
