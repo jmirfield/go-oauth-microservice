@@ -10,7 +10,7 @@ func (a *app) GetKey(ctx context.Context, req *oauth.KeyRequest) (*oauth.KeyResp
 	if err != nil {
 		return nil, err
 	}
-	return &oauth.KeyResponse{Key: string(key)}, nil
+	return &oauth.KeyResponse{Key: key}, nil
 }
 
 func (a *app) ValidateToken(ctx context.Context, token *oauth.TokenRequest) (*oauth.TokenResponse, error) {

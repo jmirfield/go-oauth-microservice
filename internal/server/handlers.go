@@ -20,6 +20,11 @@ func writeJSON(w http.ResponseWriter, data any, code int) {
 	json.NewEncoder(w).Encode(data)
 }
 
+type registerResponse struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
 func (a *app) registerHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -29,7 +34,7 @@ func (a *app) registerHandler() http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, client, http.StatusCreated)
+		writeJSON(w, registerResponse{ClientID: client.ID, ClientSecret: client.Secret}, http.StatusCreated)
 	}
 }
 
